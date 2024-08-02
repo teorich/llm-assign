@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  flask-chat-app:
+    build: ./llm-python
+    container_name: flask-chat-app
+    ports:
+      - "5000:5000"
+
+  nest-chat-api:
+    build: ./chat-api
+    container_name: nest-chat-api
+    depends_on:
+      - flask-chat-app
+    ports:
+      - "3000:3000"
