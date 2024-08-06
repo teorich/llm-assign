@@ -8,6 +8,7 @@ dependencies = [
     "python-mistralclient>=5.2.0",
     "mistralai>=0.4.2",
     "replicate>=0.31.0",
+    "llamaapi>=0.1.36",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"

@@ -1,27 +1,26 @@
 from flask import Flask, request, jsonify
+from llamaapi import LlamaAPI
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
-import replicate
 
 app = Flask(__name__)
 
 # API Keys and Models
 API_KEYS = {
-    "Llama2": "r8_EQFRsfGsVZ5vHNJUARot2Xeee3roypZ3GFpZL",
+    "Llama2": "LL-0B7kU8I0ogm1yJLPeheSTPDEMVy7sxEsiOFllgsLTnlpmQbrS8uqVdsknjRlSnsU",
     "Mistral": "EmQ5gcrQwTpKUq1EefLj40X1bLF1YwFZ"
 }
 MODELS = {
-    "Llama2": "meta/meta-llama-3-70b-instruct",
+    "Llama2": "llama3-70b",
     "Mistral": "mistral-large-latest"
 }
 
-# Initialize clients
+
 clients = {
-    "Llama2": replicate.Client(API_KEYS["Llama2"]),
+    "Llama2": LlamaAPI(API_KEYS["Llama2"]),
     "Mistral": MistralClient(api_key=API_KEYS["Mistral"])
 }
 
-# In-memory storage for conversation context
 conversation_context = {}
 
 @app.route('/chat', methods=['POST'])
@@ -43,19 +42,23 @@ def chat():
     conversation_context[model][user_id].append(prompt)
     
     if model == "Llama2":
-        inputs = {"prompt": "\n".join(conversation_context[model][user_id])}
-        iterator = clients[model].run(MODELS[model], input=inputs)
-        response = "".join(str(text) for text in iterator)
+        api_request_json = {
+            "model": MODELS[model],
+            "messages": [{"role": "user", "content": "\n".join(conversation_context[model][user_id])}]
+        }
+        response = clients[model].run(api_request_json)
+        response_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
     elif model == "Mistral":
         messages = [ChatMessage(role="user", content=prompt)]
         response = clients[model].chat(
             model=MODELS[model],
             messages=messages
-        ).choices[0].message.content
+        )
+        response_text = response.choices[0].message.content
     
-    conversation_context[model][user_id].append(response)
+    conversation_context[model][user_id].append(response_text)
     
-    return jsonify({"response": response})
+    return jsonify({"response": response_text})
 
 if __name__ == '__main__':
     app.run(debug=True)
